@@ -15,7 +15,10 @@ class Enemy:
     def create(self):
         pygame.draw.circle(self.background, (255, 0, 0), (self.x, self.y), self.radius)
 
-    def move(self, direction):
+    def move(self, direction, down):
+
+        if down:
+            self.y += self.moveValueDown
 
         if self.x <= 100:
             direction = "RIGHT"
@@ -25,10 +28,9 @@ class Enemy:
             direction = "LEFT"
             self.y += self.moveValueDown
 
-
         if direction == "RIGHT":
             self.x += self.moveValue
         elif direction == "LEFT":
             self.x -= self.moveValue
 
-        return direction
+        return [direction, down]

@@ -25,7 +25,7 @@ hit = pygame.mixer.Sound('Assets/Hit.mp3')
 
 # Set up all necessary variables
 running = True
-game_round = 1
+game_round = 0
 max_rounds = 10
 score = 0
 death_zone = dimension - (dimension / 5)
@@ -47,6 +47,8 @@ enemies = []
 enemyStep = 0
 enemyStepMax = dimension / 10
 enemyDirection = "LEFT"
+down = False
+down_count = 0
 
 
 def create_mobs():
@@ -117,7 +119,7 @@ def lose():
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
-                    game_round = 1
+                    game_round = 0
                     score = 0
                     running = True
                     game_lost = False
@@ -132,12 +134,23 @@ def lose():
 
 # Game loop
 def main():
-    global running, shooting, bullet_y, bullet_x, enemyStep, enemyDirection, score, game_round, enemyStepMax
+    global running, shooting, bullet_y, bullet_x, enemyStep, enemyDirection, score, game_round, enemyStepMax, down, down_count, max_rounds
 
     while running:
 
         # (Re)draw background
         background.fill((0, 0, 0))
+
+        font = pygame.font.SysFont(None, 48)
+
+        text = font.render("Round: " + str(game_round - 1) + "/" + str(max_rounds), True, (200, 200, 200))
+        text_rect = text.get_rect(center=(100, 30))
+
+        tuto = font.render("Shoot: UP", True, (200, 200, 200))
+        tuto_rect = tuto.get_rect(center=(dimension - (dimension / 10), 30))
+
+        background.blit(text, text_rect)
+        background.blit(tuto, tuto_rect)
 
         # Place player and yellow shield
         player.create()
@@ -180,7 +193,16 @@ def main():
         # Handle enemy movements
         if enemyStep < enemyStepMax:
             for enemy in enemies:
-                enemyDirection = enemy.move(enemyDirection)
+                enemy_moved = enemy.move(enemyDirection, down)
+                if enemy.y >= death_zone:
+                    running = False
+
+                enemyDirection = enemy_moved[0]
+                down = enemy_moved[1]
+
+                if down and down_count != game_round - 1:
+                    down_count = game_round - 1
+
                 if (enemy.x - enemy.radius) <= bullet_x <= (enemy.x + enemy.radius) and (
                         enemy.y - enemy.radius) <= bullet_y <= (enemy.y + enemy.radius):
                     print("HIT!")
@@ -189,6 +211,9 @@ def main():
                     enemies.remove(enemy)
                     hit.play()
                     bullet_y = -dimension
+
+                down_count -= 1
+
         elif enemyStep >= enemyStepMax:
             for enemy in enemies:
                 enemy.move('DOWN')
@@ -223,6 +248,7 @@ while retry:
     main()
     print("Retry")
     enemies = []
+    game_round = 1
     create_mobs()
     lose()
 
