@@ -7,7 +7,7 @@ from Class import Player, Enemy
 pygame.init()
 clock = pygame.time.Clock()
 
-# Set game window size (not customizable yet)
+# Set game window size (should be resizable)
 dimension = 2000
 
 # Create game window and canvas
@@ -26,10 +26,11 @@ hit = pygame.mixer.Sound('Assets/Hit.mp3')
 # Set up all necessary variables
 running = True
 game_round = 0
-max_rounds = 10
+max_rounds = 11
 score = 0
 death_zone = dimension - (dimension / 5)
 retry = True
+victory = False
 
 # ------- Creating player object
 x = dimension / 2
@@ -42,7 +43,7 @@ bullet_y = 0
 bullet_x = 0
 bullet_speed = dimension / 50  # Smaller means faster
 
-# ------- Creating enemies
+# ------- Creating enemies and related variables
 enemies = []
 enemyStep = 0
 enemyStepMax = dimension / 10
@@ -52,7 +53,6 @@ down_count = 0
 
 
 def create_mobs():
-
     i = 1
     x_pos = 1
     on_row = 0
@@ -70,6 +70,7 @@ def create_mobs():
         i += 1
 
 
+# Start menu
 intro = True
 
 
@@ -95,6 +96,7 @@ def menu():
         clock.tick(15)
 
 
+# Game over menu
 def lose():
     global background, dimension, running, game_round, score, retry
 
@@ -132,24 +134,29 @@ def lose():
                 quit()
 
 
-# Game loop
+# Main game loop
 def main():
-    global running, shooting, bullet_y, bullet_x, enemyStep, enemyDirection, score, game_round, enemyStepMax, down, down_count, max_rounds
+    global running, shooting, bullet_y, bullet_x, enemyStep, enemyDirection, score, game_round, enemyStepMax, down, down_count, max_rounds, victory
 
     while running:
 
         # (Re)draw background
         background.fill((0, 0, 0))
 
+        # Handle on screen info
         font = pygame.font.SysFont(None, 48)
 
-        text = font.render("Round: " + str(game_round - 1) + "/" + str(max_rounds), True, (200, 200, 200))
+        text = font.render("Round: " + str(game_round - 1) + "/" + str(max_rounds - 1), True, (200, 200, 200))
         text_rect = text.get_rect(center=(100, 30))
+
+        score_text = font.render("Score: " + str(score), True, (200, 200, 200))
+        score_text_rect = score_text.get_rect(center=(100, 80))
 
         tuto = font.render("Shoot: UP", True, (200, 200, 200))
         tuto_rect = tuto.get_rect(center=(dimension - (dimension / 10), 30))
 
         background.blit(text, text_rect)
+        background.blit(score_text, score_text_rect)
         background.blit(tuto, tuto_rect)
 
         # Place player and yellow shield
@@ -194,6 +201,8 @@ def main():
         if enemyStep < enemyStepMax:
             for enemy in enemies:
                 enemy_moved = enemy.move(enemyDirection, down)
+
+                # Game over
                 if enemy.y >= death_zone:
                     running = False
 
@@ -203,11 +212,10 @@ def main():
                 if down and down_count != game_round - 1:
                     down_count = game_round - 1
 
+                # Enemy death
                 if (enemy.x - enemy.radius) <= bullet_x <= (enemy.x + enemy.radius) and (
                         enemy.y - enemy.radius) <= bullet_y <= (enemy.y + enemy.radius):
-                    print("HIT!")
-                    score += enemy.enemy_id
-                    print("Score :" + str(score))
+                    score += enemy.enemy_id * game_round
                     enemies.remove(enemy)
                     hit.play()
                     bullet_y = -dimension
@@ -229,7 +237,7 @@ def main():
         # Increase rounds
         if not enemies:
             if game_round >= max_rounds:
-                print("YOU WON!")
+                victory = True
                 running = False
             else:
                 game_round += 1
@@ -242,10 +250,52 @@ def main():
         clock.tick(60)
 
 
+def win():
+    global background, dimension, running, game_round, score, retry
+
+    pygame.mixer.music.load('Assets/victory.mp3')
+    pygame.mixer.music.play(-1, 0.0)
+
+    font = pygame.font.SysFont(None, 48)
+
+    text = font.render("YOU WON!!!", True, (255, 255, 255))
+    text_rect = text.get_rect(center=(dimension / 2, dimension / 2))
+
+    screen.blit(text, text_rect)
+    background.fill((255, 255, 255))
+    pygame.display.update()
+
+    text = font.render("Press SPACE to replay or ESCAPE to quit", True, (255, 255, 255))
+    text_rect = text.get_rect(center=(dimension / 2, dimension / 1.5))
+
+    screen.blit(text, text_rect)
+    background.fill((255, 255, 255))
+    pygame.display.update()
+
+    game_won = True
+    while game_won:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    game_round = 0
+                    score = 0
+                    running = True
+                    game_won = False
+                elif event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    quit()
+
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+
 menu()
 pygame.mixer.music.play(-1, 0.0)
 while retry:
     main()
+    if victory:
+        win()
     print("Retry")
     enemies = []
     game_round = 1
